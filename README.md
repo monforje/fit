@@ -13,3 +13,7 @@ pip install sqlalchemy python-dotenv alembic
 или
 
 pip install -r requirements.txt
+
+для выполения миграций используем
+
+alembic upgrade head

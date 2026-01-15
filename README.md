@@ -1,4 +1,4 @@
-в корне делаем
+в корне делаем (для локальной разработки)
 
 python -m venv .venv
 
@@ -16,4 +16,8 @@ pip install -r requirements.txt
 
 для выполения миграций используем
 
-alembic upgrade head
+alembic upgrade 
+
+для запуска приложения
+
+docker compose up -d

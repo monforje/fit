@@ -8,7 +8,7 @@ python -m venv .venv
 
 потом
 
-pip install sqlalchemy python-dotenv
+pip install sqlalchemy python-dotenv alembic
 
 или
 

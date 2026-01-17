@@ -3,8 +3,6 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres
-    networks:
-      - fit
     ports:
       - "5432:5432"
     environment:
@@ -13,13 +11,21 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
+      - ./db-init/postgres:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups:ro
+    # Чтобы он раньше остальных стартовал
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 1s
+      retries: 5
+    networks:
+      - fit
 
 # Redash Postgres DB
   redash_postgres:
     image: postgres:16
     container_name: redash_postgres
-    networks:
-      - fit
     ports:
       - "5433:5432"
     environment:
@@ -28,49 +34,58 @@ services:
       POSTGRES_DB: ${REDASH_POSTGRES_DB}
     volumes:
       - ./volumes/redash_postgres:/var/lib/postgresql/data
+      - ./db-init/redash_postgres:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${REDASH_POSTGRES_USER} -d ${REDASH_POSTGRES_DB}"]
+      interval: 3s
+      timeout: 1s
+      retries: 5
+    networks:
+      - fit
 
 # Redash Redis
   redash_redis:
     image: redis:7-alpine
     container_name: redash_redis
-    networks:
-      - fit
     volumes:
       - ./volumes/redash_redis:/data
+    networks:
+      - fit
 
 # Redash Server
   redash_server:
     image: redash/redash:latest
     container_name: redash_server
-    networks:
-      - fit
     depends_on:
-      - redash_postgres
-      - redash_redis
+      redash_postgres:
+        condition: service_healthy
+      redash_redis:
+        condition: service_started
     ports:
       - "5000:5000"
     env_file:
       - config-redash.yaml
     command: server
+    networks:
+      - fit
 
 # Redash Scheduler
   redash_scheduler:
     image: redash/redash:latest
     container_name: redash_scheduler
-    networks:
-      - fit
     depends_on:
       - redash_server
     env_file:
       - config-redash.yaml
     command: scheduler
+    networks:
+      - fit
 
 # Redash Worker
   redash_worker:
     image: redash/redash:latest
     container_name: redash_worker
-    networks:
-      - fit
     depends_on:
       - redash_server
     env_file:
@@ -78,17 +93,19 @@ services:
     environment:
       QUEUES: queries,scheduled_queries,schemas
     command: worker
+    networks:
+      - fit
 
 # Adminer for db
   adminer:
     image: adminer:latest
     container_name: adminer
-    networks:
-      - fit
     depends_on:
       - postgres
     ports:
       - "18081:8080"
+    networks:
+      - fit
 
 # Python app
   generator:
@@ -96,14 +113,16 @@ services:
       context: .
       dockerfile: src/Dockerfile
     container_name: generator
-    networks:
-      - fit
-    depends_on:
-      - postgres
     environment:
       DATABASE_URL: ${DATABASE_URL}
       INTERVAL_SECONDS: ${INTERVAL_SECONDS}
       PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fit
 
 # Jupyter Notebook
   jupyter:

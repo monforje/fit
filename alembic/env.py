@@ -55,9 +55,11 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 def get_url() -> str:
-    url = os.getenv("DATABASE_URL")
+    # For local development, use LOCAL_DATABASE_URL (localhost)
+    # For Docker containers, DATABASE_URL (postgres hostname) is used
+    url = os.getenv("LOCAL_DATABASE_URL") or os.getenv("DATABASE_URL")
     if not url:
-        raise RuntimeError("DATABASE_URL is not set")
+        raise RuntimeError("LOCAL_DATABASE_URL or DATABASE_URL is not set")
     return url
 
 def run_migrations_online() -> None:

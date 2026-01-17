@@ -8,9 +8,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: dan
-      POSTGRES_PASSWORD: dan
-      POSTGRES_DB: fit
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
     restart: unless-stopped
@@ -24,9 +24,9 @@ services:
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_USER: redash
-      POSTGRES_PASSWORD: redash
-      POSTGRES_DB: redash
+      POSTGRES_USER: ${REDASH_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${REDASH_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${REDASH_POSTGRES_DB}
     volumes:
       - ./volumes/redash_postgres:/var/lib/postgresql/data
     restart: unless-stopped
@@ -52,11 +52,8 @@ services:
       - redash_redis
     ports:
       - "5000:5000"
-    environment:
-      REDASH_DATABASE_URL: postgresql://redash:redash@redash_postgres:5432/redash
-      REDASH_REDIS_URL: redis://redash_redis:6379/0
-      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
-      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+    env_file:
+      - config-redash.yaml
     command: server
     restart: unless-stopped
 
@@ -68,11 +65,8 @@ services:
       - fit
     depends_on:
       - redash_server
-    environment:
-      REDASH_DATABASE_URL: postgresql://redash:redash@redash_postgres:5432/redash
-      REDASH_REDIS_URL: redis://redash_redis:6379/0
-      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
-      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+    env_file:
+      - config-redash.yaml
     command: scheduler
     restart: unless-stopped
 
@@ -84,11 +78,9 @@ services:
       - fit
     depends_on:
       - redash_server
+    env_file:
+      - config-redash.yaml
     environment:
-      REDASH_DATABASE_URL: postgresql://redash:redash@redash_postgres:5432/redash
-      REDASH_REDIS_URL: redis://redash_redis:6379/0
-      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
-      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
       QUEUES: queries,scheduled_queries,schemas
     command: worker
     restart: unless-stopped
@@ -116,9 +108,9 @@ services:
     depends_on:
       - postgres
     environment:
-      DATABASE_URL: postgresql://dan:dan@postgres:5432/fit
-      INTERVAL_SECONDS: 1
-      PYTHONUNBUFFERED: 1
+      DATABASE_URL: ${DATABASE_URL}
+      INTERVAL_SECONDS: ${INTERVAL_SECONDS}
+      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
     restart: unless-stopped
 
 # Jupyter Notebook
@@ -134,8 +126,8 @@ services:
     volumes:
       - ./notebooks:/home/jovyan/work
     environment:
-      JUPYTER_TOKEN: dev
-    command: start-notebook.sh --NotebookApp.token=dev --NotebookApp.password=''
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN}
+    command: start-notebook.sh --NotebookApp.token=${JUPYTER_TOKEN} --NotebookApp.password=''
     restart: unless-stopped
 
 networks:

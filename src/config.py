@@ -12,9 +12,9 @@ class Settings:
 def load_settings() -> Settings:
     settings = Settings()
 
-    database_url = os.getenv("DATABASE_URL")
+    database_url = os.getenv("LOCAL_DATABASE_URL")
     if not database_url:
-        raise RuntimeError("DATABASE_URL is not set in .env")
+        raise RuntimeError("LOCAL_DATABASE_URL is not set in .env")
 
     interval_seconds = float(os.getenv("INTERVAL_SECONDS", "1"))
 

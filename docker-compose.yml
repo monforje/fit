@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: dan
       POSTGRES_DB: fit
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./volumes/postgres:/var/lib/postgresql/data
     restart: unless-stopped
 
 # Redash Postgres DB
@@ -24,7 +24,7 @@ services:
       POSTGRES_PASSWORD: redash
       POSTGRES_DB: redash
     volumes:
-      - redash_postgres_data:/var/lib/postgresql/data
+      - ./volumes/redash_postgres:/var/lib/postgresql/data
     restart: unless-stopped
 
 # Redash Redis
@@ -32,7 +32,7 @@ services:
     image: redis:7-alpine
     container_name: redash_redis
     volumes:
-      - redash_redis_data:/data
+      - ./volumes/redash_redis:/data
     restart: unless-stopped
 
 # Redash Server
@@ -119,8 +119,3 @@ services:
       JUPYTER_TOKEN: dev
     command: start-notebook.sh --NotebookApp.token=dev --NotebookApp.password=''
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redash_postgres_data:
-  redash_redis_data:

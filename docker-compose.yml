@@ -13,7 +13,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
-    restart: unless-stopped
 
 # Redash Postgres DB
   redash_postgres:
@@ -29,7 +28,6 @@ services:
       POSTGRES_DB: ${REDASH_POSTGRES_DB}
     volumes:
       - ./volumes/redash_postgres:/var/lib/postgresql/data
-    restart: unless-stopped
 
 # Redash Redis
   redash_redis:
@@ -39,11 +37,10 @@ services:
       - fit
     volumes:
       - ./volumes/redash_redis:/data
-    restart: unless-stopped
 
 # Redash Server
   redash_server:
-    image: redash/redash:10.1.0.b50633
+    image: redash/redash:latest
     container_name: redash_server
     networks:
       - fit
@@ -55,11 +52,10 @@ services:
     env_file:
       - config-redash.yaml
     command: server
-    restart: unless-stopped
 
 # Redash Scheduler
   redash_scheduler:
-    image: redash/redash:10.1.0.b50633
+    image: redash/redash:latest
     container_name: redash_scheduler
     networks:
       - fit
@@ -68,11 +64,10 @@ services:
     env_file:
       - config-redash.yaml
     command: scheduler
-    restart: unless-stopped
 
 # Redash Worker
   redash_worker:
-    image: redash/redash:10.1.0.b50633
+    image: redash/redash:latest
     container_name: redash_worker
     networks:
       - fit
@@ -83,11 +78,10 @@ services:
     environment:
       QUEUES: queries,scheduled_queries,schemas
     command: worker
-    restart: unless-stopped
 
 # Adminer for db
   adminer:
-    image: adminer:4.8.1
+    image: adminer:latest
     container_name: adminer
     networks:
       - fit
@@ -95,7 +89,6 @@ services:
       - postgres
     ports:
       - "18081:8080"
-    restart: unless-stopped
 
 # Python app
   generator:
@@ -111,7 +104,6 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       INTERVAL_SECONDS: ${INTERVAL_SECONDS}
       PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
-    restart: unless-stopped
 
 # Jupyter Notebook
   jupyter:
@@ -130,7 +122,6 @@ services:
     environment:
       JUPYTER_TOKEN: ${JUPYTER_TOKEN}
     command: start-notebook.sh --NotebookApp.token=${JUPYTER_TOKEN} --NotebookApp.password=''
-    restart: unless-stopped
 
 networks:
   fit:

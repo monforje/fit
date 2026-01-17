@@ -3,5 +3,7 @@
 .venv/
 __pycache__/
 .ipynb_checkpoints/
+volumes/
+**/postmaster.pid
 
 .env

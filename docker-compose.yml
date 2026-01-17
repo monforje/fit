@@ -3,6 +3,8 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres
+    networks:
+      - fit
     ports:
       - "5432:5432"
     environment:
@@ -17,6 +19,8 @@ services:
   redash_postgres:
     image: postgres:16
     container_name: redash_postgres
+    networks:
+      - fit
     ports:
       - "5433:5432"
     environment:
@@ -31,6 +35,8 @@ services:
   redash_redis:
     image: redis:7-alpine
     container_name: redash_redis
+    networks:
+      - fit
     volumes:
       - ./volumes/redash_redis:/data
     restart: unless-stopped
@@ -39,6 +45,8 @@ services:
   redash_server:
     image: redash/redash:latest
     container_name: redash_server
+    networks:
+      - fit
     depends_on:
       - redash_postgres
       - redash_redis
@@ -56,6 +64,8 @@ services:
   redash_scheduler:
     image: redash/redash:latest
     container_name: redash_scheduler
+    networks:
+      - fit
     depends_on:
       - redash_server
     environment:
@@ -70,6 +80,8 @@ services:
   redash_worker:
     image: redash/redash:latest
     container_name: redash_worker
+    networks:
+      - fit
     depends_on:
       - redash_server
     environment:
@@ -85,6 +97,8 @@ services:
   adminer:
     image: adminer:latest
     container_name: adminer
+    networks:
+      - fit
     depends_on:
       - postgres
     ports:
@@ -97,6 +111,8 @@ services:
       context: .
       dockerfile: src/Dockerfile
     container_name: generator
+    networks:
+      - fit
     depends_on:
       - postgres
     environment:
@@ -109,6 +125,8 @@ services:
   jupyter:
     image: jupyter/scipy-notebook:latest
     container_name: jupyter
+    networks:
+      - fit
     depends_on:
       - postgres
     ports:
@@ -119,3 +137,7 @@ services:
       JUPYTER_TOKEN: dev
     command: start-notebook.sh --NotebookApp.token=dev --NotebookApp.password=''
     restart: unless-stopped
+
+networks:
+  fit:
+    driver: bridge

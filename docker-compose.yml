@@ -13,6 +13,74 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+# Redash Postgres DB
+  redash_postgres:
+    image: postgres:16
+    container_name: redash_postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: redash
+      POSTGRES_PASSWORD: redash
+      POSTGRES_DB: redash
+    volumes:
+      - redash_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+# Redash Redis
+  redash_redis:
+    image: redis:7-alpine
+    container_name: redash_redis
+    volumes:
+      - redash_redis_data:/data
+    restart: unless-stopped
+
+# Redash Server
+  redash_server:
+    image: redash/redash:latest
+    container_name: redash_server
+    depends_on:
+      - redash_postgres
+      - redash_redis
+    ports:
+      - "5000:5000"
+    environment:
+      REDASH_DATABASE_URL: postgresql://redash:redash@redash_postgres:5432/redash
+      REDASH_REDIS_URL: redis://redash_redis:6379/0
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+    command: server
+    restart: unless-stopped
+
+# Redash Scheduler
+  redash_scheduler:
+    image: redash/redash:latest
+    container_name: redash_scheduler
+    depends_on:
+      - redash_server
+    environment:
+      REDASH_DATABASE_URL: postgresql://redash:redash@redash_postgres:5432/redash
+      REDASH_REDIS_URL: redis://redash_redis:6379/0
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+    command: scheduler
+    restart: unless-stopped
+
+# Redash Worker
+  redash_worker:
+    image: redash/redash:latest
+    container_name: redash_worker
+    depends_on:
+      - redash_server
+    environment:
+      REDASH_DATABASE_URL: postgresql://redash:redash@redash_postgres:5432/redash
+      REDASH_REDIS_URL: redis://redash_redis:6379/0
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+      QUEUES: queries,scheduled_queries,schemas
+    command: worker
+    restart: unless-stopped
+
 # Adminer for db
   adminer:
     image: adminer:latest
@@ -39,3 +107,5 @@ services:
 
 volumes:
   postgres_data:
+  redash_postgres_data:
+  redash_redis_data:

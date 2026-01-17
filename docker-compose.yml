@@ -43,7 +43,7 @@ services:
 
 # Redash Server
   redash_server:
-    image: redash/redash:latest
+    image: redash/redash:10.1.0.b50633
     container_name: redash_server
     networks:
       - fit
@@ -59,7 +59,7 @@ services:
 
 # Redash Scheduler
   redash_scheduler:
-    image: redash/redash:latest
+    image: redash/redash:10.1.0.b50633
     container_name: redash_scheduler
     networks:
       - fit
@@ -72,7 +72,7 @@ services:
 
 # Redash Worker
   redash_worker:
-    image: redash/redash:latest
+    image: redash/redash:10.1.0.b50633
     container_name: redash_worker
     networks:
       - fit
@@ -87,7 +87,7 @@ services:
 
 # Adminer for db
   adminer:
-    image: adminer:latest
+    image: adminer:4.8.1
     container_name: adminer
     networks:
       - fit
@@ -115,7 +115,9 @@ services:
 
 # Jupyter Notebook
   jupyter:
-    image: jupyter/scipy-notebook:latest
+    build:
+      context: .
+      dockerfile: notebooks/Dockerfile
     container_name: jupyter
     networks:
       - fit

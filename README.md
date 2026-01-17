@@ -41,7 +41,9 @@ End-to-end система для генерации и анализа данны
 
 ## Как запустить
 
-### 1. Настройка Python окружения
+### 1. Настройка Python (локального) окружения
+
+*В приниципе может быть не нужно
 
 ```bash
 python -m venv .venv
@@ -85,6 +87,8 @@ docker-compose up
 ```
 
 ### 5. Инициализация базы данных Redash
+
+*Сейчас благодаря init-db этого не нужно
 
 ```bash
 docker-compose run --rm redash_server create_db

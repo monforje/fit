@@ -1,10 +1,29 @@
 import random
 import time
-from sqlalchemy import text
+import os
+import psycopg2
 
-from config import load_settings
-from db import connect_database, healthcheck
+DB_URL = os.getenv("DATABASE_URL") or os.getenv(
+    "LOCAL_DATABASE_URL", "postgresql://dan:dan@localhost:5432/fit"
+)
+INTERVAL = int(os.getenv("INTERVAL_SECONDS", "1"))
 
+
+def connect_db():
+    return psycopg2.connect(DB_URL)
+
+
+def init_tables(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activity (
+            id BIGSERIAL PRIMARY KEY,
+            steps INTEGER NOT NULL,
+            calories INTEGER NOT NULL,
+            activity_type VARCHAR(50) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+    """)
+    
 
 ACTIVITY_PROFILES = {
     "walking":  {"steps_min": 200, "steps_max": 1400, "kcal_min": 0.03, "kcal_max": 0.06},
@@ -37,36 +56,52 @@ def generate_activity() -> dict:
 
 
 def main():
-    settings = load_settings()
-
-    db = connect_database(settings.database_url)
-    healthcheck(db)
-
-    print("Connected to DB")
-
-    insert_sql = text("""
-        INSERT INTO activity (steps, calories, activity_type)
-        VALUES (:steps, :calories, :activity_type)
-        RETURNING id, created_at
-    """)
+    conn = None
+    cur = None
 
     try:
+        conn = connect_db()
+        cur = conn.cursor()
+        init_tables(cur)
+        conn.commit()
+
+        print("Connected to DB")
+
+        insert_sql = """
+            INSERT INTO activity (steps, calories, activity_type)
+            VALUES (%s, %s, %s)
+            RETURNING id, created_at
+        """
+
         while True:
             record = generate_activity()
+            cur.execute(
+                insert_sql,
+                (record["steps"], record["calories"], record["activity_type"]),
+            )
+            row = cur.fetchone()
+            if row is None:
+                conn.rollback()
+                raise RuntimeError("Insert succeeded but RETURNING returned no row")
+            conn.commit()
 
-            with db.engine.begin() as conn:
-                row = conn.execute(insert_sql, record).mappings().one()
+            print(
+                "Inserted:",
+                "id=", row[0],
+                "time=", row[1],
+                "data=", record,
+            )
 
-            print("Inserted:",
-                  "id=", row["id"],
-                  "time=", row["created_at"],
-                  "data=", record)
-
-            time.sleep(settings.interval_seconds)
+            time.sleep(INTERVAL)
 
     except KeyboardInterrupt:
         print("Stopped by user")
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
 
 
 if __name__ == "__main__":
-        main()
+    main()

@@ -49,7 +49,6 @@ End-to-end система для генерации и анализа данны
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-alembic upgrade head
 ```
 
 ### 2. Установка Docker
@@ -67,17 +66,13 @@ POSTGRES_DB=fit
 DATABASE_URL=postgresql://dan:dan@postgres:5432/fit
 LOCAL_DATABASE_URL=postgresql://dan:dan@localhost:5432/fit
 
-REDASH_POSTGRES_USER=redash
-REDASH_POSTGRES_PASSWORD=redash
-REDASH_POSTGRES_DB=redash
-
-REDASH_COOKIE_SECRET=put_some_long_random_string_here
-REDASH_SECRET_KEY=put_some_long_random_string_here_too
+REDASH_DATABASE_URL=postgresql://dan:dan@redash_postgres:5432/redash
+REDASH_REDIS_URL=redis://redash_redis:6379/0
+REDASH_COOKIE_SECRET=6f34ec95734e51b3dd3c50fabe1ece83ae0e4f6d17ca1b34e67d0190af32a5ea
+REDASH_SECRET_KEY=0e84fb59862ac363117ca8bc92a017a6172d33f79402368d2d8fc32f579bfcfa
 
 INTERVAL_SECONDS=1
 PYTHONUNBUFFERED=1
-
-JUPYTER_TOKEN=dev
 ```
 
 ### 4. Запуск сервисов

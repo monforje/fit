@@ -1,3 +1,14 @@
+x-redash-service: &redash-service
+  image: redash/redash:latest
+  depends_on:
+    - redash_postgres
+    - redash_redis
+  env_file:
+    - ./.env
+  restart: always
+  networks:
+    - fit
+
 services:
 # Postgres DB
   postgres:
@@ -5,17 +16,15 @@ services:
     container_name: postgres
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - ./.env
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
       - ./db-init/postgres:/docker-entrypoint-initdb.d:ro
       - ./backups:/backups:ro
     # Чтобы он раньше остальных стартовал
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 3s
       timeout: 1s
       retries: 5
@@ -25,74 +34,79 @@ services:
 # Redash Postgres DB
   redash_postgres:
     image: postgres:16
-    container_name: redash_postgres
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_USER: ${REDASH_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${REDASH_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${REDASH_POSTGRES_DB}
+    env_file:
+      - ./.env
     volumes:
       - ./volumes/redash_postgres:/var/lib/postgresql/data
       - ./db-init/redash_postgres:/docker-entrypoint-initdb.d:ro
       - ./backups:/backups:ro
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${REDASH_POSTGRES_USER} -d ${REDASH_POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 3s
       timeout: 1s
       retries: 5
     networks:
-      - fit
+      - fit 
 
 # Redash Redis
   redash_redis:
     image: redis:7-alpine
-    container_name: redash_redis
     volumes:
       - ./volumes/redash_redis:/data
+    restart: unless-stopped
     networks:
       - fit
 
 # Redash Server
-  redash_server:
-    image: redash/redash:latest
-    container_name: redash_server
-    depends_on:
-      redash_postgres:
-        condition: service_healthy
-      redash_redis:
-        condition: service_started
+  server:
+    <<: *redash-service
+    command: server
     ports:
       - "5000:5000"
-    env_file:
-      - config-redash.yaml
-    command: server
-    networks:
-      - fit
+    environment:
+      REDASH_WEB_WORKERS: 4
 
 # Redash Scheduler
-  redash_scheduler:
-    image: redash/redash:latest
-    container_name: redash_scheduler
-    depends_on:
-      - redash_server
-    env_file:
-      - config-redash.yaml
+  scheduler:
+    <<: *redash-service
     command: scheduler
-    networks:
-      - fit
+    depends_on:
+      - server
+    environment:
+      QUEUES: "scheduled_queries,schemas"
+      WORKERS_COUNT: 1
+
+# adhoc_worker
+  adhoc_worker:
+    <<: *redash-service
+    command: worker
+    depends_on:
+      - server
+    environment:
+      QUEUES: "queries"
+      WORKERS_COUNT: 2
 
 # Redash Worker
-  redash_worker:
-    image: redash/redash:latest
-    container_name: redash_worker
-    depends_on:
-      - redash_server
-    env_file:
-      - config-redash.yaml
-    environment:
-      QUEUES: queries,scheduled_queries,schemas
+  worker:
+    <<: *redash-service
     command: worker
+    depends_on:
+      - server
+    environment:
+      QUEUES: "periodic,emails,default"
+      WORKERS_COUNT: 1
+
+# Redash Nginx
+  nginx:
+    image: redash/nginx:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    links:
+      - server:redash
+    restart: always
     networks:
       - fit
 
@@ -113,10 +127,8 @@ services:
       context: .
       dockerfile: src/Dockerfile
     container_name: generator
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      INTERVAL_SECONDS: ${INTERVAL_SECONDS}
-      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
+    env_file:
+      - ./.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,8 +151,8 @@ services:
     volumes:
       - ./notebooks:/home/jovyan/work
     environment:
-      JUPYTER_TOKEN: ${JUPYTER_TOKEN}
-    command: start-notebook.sh --NotebookApp.token=${JUPYTER_TOKEN} --NotebookApp.password=''
+      JUPYTER_TOKEN: dev
+    command: start-notebook.sh --NotebookApp.password=''
 
 networks:
   fit:

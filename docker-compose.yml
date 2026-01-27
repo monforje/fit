@@ -22,7 +22,6 @@ services:
       - ./volumes/postgres:/var/lib/postgresql/data
       - ./db-init/postgres:/docker-entrypoint-initdb.d:ro
       - ./backups:/backups:ro
-    # Чтобы он раньше остальных стартовал
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 3s
